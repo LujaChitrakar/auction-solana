@@ -1,11 +1,10 @@
+use crate::states::Auction;
 use anchor_lang::prelude::*;
 
-use crate::states::Auction;
-
 #[derive(Accounts)]
-pub struct CreateAuction<'info>{
+pub struct CreateAuction<'info> {
     #[account(mut)]
-    pub owner:Signer<'info>,
+    pub owner: Signer<'info>,
 
     #[account(
         init,
@@ -14,7 +13,11 @@ pub struct CreateAuction<'info>{
         seeds=[b"auction",owner.key().as_ref()],
         bump,
     )]
-    pub auction:Account<'info,Auction>,
+    pub auction: Account<'info, Auction>,
 
-    pub system_program:Program<'info,System>
+    ///CHECK: ONLY HOLDS SOL 
+    #[account(seeds=[b"auction_escrow",auction.key().as_ref()],bump)]
+    pub auction_escrow:UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
 }
