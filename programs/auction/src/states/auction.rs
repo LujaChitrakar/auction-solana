@@ -8,7 +8,7 @@ pub struct Auction {
     pub starting_price: u64,
     pub highest_bid: u64,
     pub highest_bidder: Pubkey,
-    pub start_time:i64,
+    pub start_time: i64,
     pub end_time: i64,
     pub is_open: bool,
     pub bump: u8,
