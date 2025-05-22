@@ -14,11 +14,11 @@ pub struct CreateBid<'info> {
 
     ///CHECK: refund back to previous bidder
     #[account(mut)]
-    pub previous_bidder:UncheckedAccount<'info>,
+    pub previous_bidder: UncheckedAccount<'info>,
 
     ///CHECK: escrowaccount that only holds sol
     #[account(mut)]
-    pub auction_escrow:UncheckedAccount<'info>,
+    pub auction_escrow: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }

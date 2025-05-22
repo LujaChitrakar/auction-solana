@@ -6,4 +6,8 @@ pub enum ErrorCode {
     BidNotHighestBid,
     #[msg("The auction has ended")]
     AuctionTImeHasPassed,
+    #[msg("The previous bidder and highest bidder mismatch")]
+    PreviousBidderMismatch,
+    #[msg("The auction is closed")]
+    AuctionClosed,
 }

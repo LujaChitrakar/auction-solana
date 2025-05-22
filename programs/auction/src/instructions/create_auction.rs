@@ -15,9 +15,9 @@ pub struct CreateAuction<'info> {
     )]
     pub auction: Account<'info, Auction>,
 
-    ///CHECK: ONLY HOLDS SOL 
+    ///CHECK: ONLY HOLDS SOL
     #[account(seeds=[b"auction_escrow",auction.key().as_ref()],bump)]
-    pub auction_escrow:UncheckedAccount<'info>,
+    pub auction_escrow: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
