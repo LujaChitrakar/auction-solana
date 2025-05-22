@@ -11,7 +11,6 @@ declare_id!("E6nE6seBRzfDrk1m96fKXKWxYe7JYWSpkFVMj5CLGeP6");
 #[program]
 pub mod auction {
     use anchor_lang::system_program::{transfer, Transfer};
-    use states::auction;
 
     use super::*;
 
@@ -55,7 +54,7 @@ pub mod auction {
 
         require_keys_eq!(
             ctx.accounts.previous_bidder.key(),
-            auction.highest_bidder.key(),
+            auction.highest_bidder,
             ErrorCode::PreviousBidderMismatch
         );
 
@@ -88,6 +87,26 @@ pub mod auction {
         auction.highest_bidder = ctx.accounts.bidder.key();
 
         emit!(BidPlaced{bidder:ctx.accounts.auction.highest_bidder,bid_amount:bid_amount,bid_time:current_time});
+        Ok(())
+    }
+
+    pub fn end_auction(ctx: Context<EndAuction>)->Result<()>{
+        let auction=&mut ctx.accounts.auction;
+        let clock=Clock::get()?.unix_timestamp;
+        let auction_key=auction.key();
+
+        require!(auction.end_time<=clock,ErrorCode::AuctionEndTimeNotReached);
+        require_keys_eq!(ctx.accounts.previous_bidder.key(),auction.highest_bidder,ErrorCode::PreviousBidderMismatch);
+
+        let signer_seeds: &[&[&[u8]]]=&[&[b"auction_escrow",auction_key.as_ref(),&[auction.bump]]];
+
+        let cpi_ctx=CpiContext::new_with_signer(ctx.accounts.system_program.to_account_info(), Transfer{from:ctx.accounts.escrow_auction.to_account_info(),to:ctx.accounts.owner.to_account_info()}, signer_seeds);
+
+        transfer(cpi_ctx, auction.highest_bid)?;
+
+        auction.is_open=false;
+
+        emit!(AuctionEnded{highest_bidder:auction.highest_bidder,highest_bid:auction.highest_bid});
         Ok(())
     }
 }

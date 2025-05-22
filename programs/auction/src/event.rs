@@ -15,3 +15,9 @@ pub struct AuctionStarted{
     pub strating_time:i64,
     pub end_time:i64,
 }
+
+#[event]
+pub struct AuctionEnded{
+    pub highest_bidder:Pubkey,
+    pub highest_bid:u64,
+}

@@ -10,4 +10,6 @@ pub enum ErrorCode {
     PreviousBidderMismatch,
     #[msg("The auction is closed")]
     AuctionClosed,
+    #[msg("The auction end time is greater than current time")]
+    AuctionEndTimeNotReached,
 }
