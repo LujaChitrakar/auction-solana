@@ -1,6 +1,5 @@
-use anchor_lang::prelude::*;
-
 use crate::states::Auction;
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct EndAuction<'info> {

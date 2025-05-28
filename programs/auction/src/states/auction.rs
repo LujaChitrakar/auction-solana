@@ -12,4 +12,5 @@ pub struct Auction {
     pub end_time: i64,
     pub is_open: bool,
     pub bump: u8,
+    pub escrow_bump: u8,
 }
