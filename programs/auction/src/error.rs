@@ -12,4 +12,6 @@ pub enum ErrorCode {
     AuctionClosed,
     #[msg("The auction end time is greater than current time")]
     AuctionEndTimeNotReached,
+    #[msg("TOnly owner is authorized for this action.")]
+    NotOwner,
 }

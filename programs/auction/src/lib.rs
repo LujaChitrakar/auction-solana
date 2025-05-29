@@ -3,17 +3,16 @@ pub mod error;
 pub mod event;
 pub mod instructions;
 pub mod states;
+use anchor_lang::system_program::{transfer, Transfer};
+use anchor_spl::token::{transfer as token_transfer, Transfer as TransferToken};
 use error::ErrorCode;
 use event::*;
 use instructions::*;
+
 declare_id!("E6nE6seBRzfDrk1m96fKXKWxYe7JYWSpkFVMj5CLGeP6");
 
 #[program]
 pub mod auction {
-    use anchor_lang::system_program::{transfer, Transfer};
-    use anchor_spl::token::transfer as token_transfer;
-    use anchor_spl::token::Transfer as TransferToken;
-
     use super::*;
 
     pub fn create_auction(
@@ -34,14 +33,19 @@ pub mod auction {
         auction.end_time = end_time;
         auction.is_open = true;
         auction.bump = ctx.bumps.auction;
-        auction.escrow_bump=ctx.bumps.auction_escrow;
+        auction.escrow_bump = ctx.bumps.auction_escrow;
 
-        let cpi_program=ctx.accounts.token_program.to_account_info();
+        let cpi_program = ctx.accounts.token_program.to_account_info();
 
-        let cpi_ctx=CpiContext::new(cpi_program,TransferToken{to:ctx.accounts.escrow_nft_token_account.to_account_info(),
-        from:ctx.accounts.owner_nft_account.to_account_info(),
-authority:ctx.accounts.owner.to_account_info()});
-token_transfer(cpi_ctx, 1)?;
+        let cpi_ctx_nft = CpiContext::new(
+            cpi_program,
+            TransferToken {
+                to: ctx.accounts.escrow_nft_token_account.to_account_info(),
+                from: ctx.accounts.owner_nft_account.to_account_info(),
+                authority: ctx.accounts.owner.to_account_info(),
+            },
+        );
+        token_transfer(cpi_ctx_nft, 1)?;
 
         emit!(AuctionStarted {
             seller: ctx.accounts.owner.key(),
@@ -57,7 +61,6 @@ token_transfer(cpi_ctx, 1)?;
         let auction = &mut ctx.accounts.auction;
         let highest_bid = auction.highest_bid;
         let auction_key = auction.key();
-
         let auction_end_time = auction.end_time;
         let current_time = Clock::get()?.unix_timestamp;
 
@@ -67,7 +70,6 @@ token_transfer(cpi_ctx, 1)?;
             ErrorCode::AuctionTImeHasPassed
         );
         require!(auction.is_open == true, ErrorCode::AuctionClosed);
-
         require_keys_eq!(
             ctx.accounts.previous_bidder.key(),
             auction.highest_bidder,
@@ -75,10 +77,14 @@ token_transfer(cpi_ctx, 1)?;
         );
 
         if auction.highest_bidder != Pubkey::default() {
-            let seeds: &[&[&[u8]]] = &[&[b"auction_escrow", auction_key.as_ref(), &[auction.escrow_bump]]];
+            let seeds: &[&[&[u8]]] = &[&[
+                b"auction_escrow",
+                auction_key.as_ref(),
+                &[auction.escrow_bump],
+            ]];
             let refund_amount = auction.highest_bid;
 
-            let cpi_ctx_new = CpiContext::new(
+            let cpi_ctx_prevbidder = CpiContext::new(
                 ctx.accounts.system_program.to_account_info(),
                 Transfer {
                     from: ctx.accounts.auction_escrow.to_account_info(),
@@ -86,10 +92,10 @@ token_transfer(cpi_ctx, 1)?;
                 },
             )
             .with_signer(seeds);
-            transfer(cpi_ctx_new, refund_amount)?;
+            transfer(cpi_ctx_prevbidder, refund_amount)?;
         }
 
-        let cpi_ctx_old = CpiContext::new(
+        let cpi_ctx = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             Transfer {
                 from: ctx.accounts.bidder.to_account_info(),
@@ -97,7 +103,7 @@ token_transfer(cpi_ctx, 1)?;
             },
         );
 
-        transfer(cpi_ctx_old, bid_amount)?;
+        transfer(cpi_ctx, bid_amount)?;
 
         auction.highest_bid = bid_amount;
         auction.highest_bidder = ctx.accounts.bidder.key();
@@ -124,21 +130,44 @@ token_transfer(cpi_ctx, 1)?;
             auction.highest_bidder,
             ErrorCode::PreviousBidderMismatch
         );
+        require_keys_eq!(
+            ctx.accounts.owner.key(),
+            auction.seller,
+            ErrorCode::NotOwner
+        );
 
-        let signer_seeds: &[&[&[u8]]] =
-            &[&[b"auction_escrow", auction_key.as_ref(), &[auction.escrow_bump]]];
+        let signer_seeds: &[&[&[u8]]] = &[&[
+            b"auction_escrow",
+            auction_key.as_ref(),
+            &[auction.escrow_bump],
+        ]];
 
         let cpi_ctx = CpiContext::new_with_signer(
             ctx.accounts.system_program.to_account_info(),
             Transfer {
-                from: ctx.accounts.escrow_auction.to_account_info(),
+                from: ctx.accounts.auction_escrow.to_account_info(),
                 to: ctx.accounts.owner.to_account_info(),
             },
             signer_seeds,
         );
 
-        transfer(cpi_ctx, auction.highest_bid)?;
+        let signer_seeds_nft: &[&[&[u8]]] =
+            &[&[b"escrow_nft", auction_key.as_ref(), &[auction.escrow_bump]]];
 
+        let cpi_program_nft = ctx.accounts.token_program.to_account_info();
+
+        let cpi_ctx_nft = CpiContext::new(
+            cpi_program_nft,
+            TransferToken {
+                to: ctx.accounts.highest_bidder_nft_account.to_account_info(),
+                from: ctx.accounts.escrow_nft_token_account.to_account_info(),
+                authority: ctx.accounts.auction_escrow.to_account_info(),
+            },
+        )
+        .with_signer(signer_seeds_nft);
+
+        token_transfer(cpi_ctx_nft, 1)?;
+        transfer(cpi_ctx, auction.highest_bid)?;
         auction.is_open = false;
 
         emit!(AuctionEnded {
