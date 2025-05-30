@@ -13,7 +13,7 @@ pub struct CreateAuction<'info> {
     #[account(
         init,
         payer=owner,
-        space=Auction::INIT_SPACE,
+        space=139,
         seeds=[b"auction",owner.key().as_ref()],
         bump,
     )]
@@ -51,4 +51,4 @@ pub struct CreateAuction<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 
     pub system_program: Program<'info, System>,
-}
+} 

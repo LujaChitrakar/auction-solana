@@ -151,20 +151,19 @@ pub mod auction {
             signer_seeds,
         );
 
-        let signer_seeds_nft: &[&[&[u8]]] =
-            &[&[b"escrow_nft", auction_key.as_ref(), &[auction.escrow_bump]]];
+        // let signer_seeds_nft: &[&[&[u8]]]=&[&[b"escrow_nft",auction_key.as_ref()&[auction.escrow_bump]];
 
         let cpi_program_nft = ctx.accounts.token_program.to_account_info();
 
         let cpi_ctx_nft = CpiContext::new(
             cpi_program_nft,
             TransferToken {
-                to: ctx.accounts.highest_bidder_nft_account.to_account_info(),
                 from: ctx.accounts.escrow_nft_token_account.to_account_info(),
+                to: ctx.accounts.highest_bidder_nft_account.to_account_info(),
                 authority: ctx.accounts.auction_escrow.to_account_info(),
             },
         )
-        .with_signer(signer_seeds_nft);
+        .with_signer(signer_seeds);
 
         token_transfer(cpi_ctx_nft, 1)?;
         transfer(cpi_ctx, auction.highest_bid)?;
