@@ -70,13 +70,13 @@ pub mod auction {
             ErrorCode::AuctionTImeHasPassed
         );
         require!(auction.is_open == true, ErrorCode::AuctionClosed);
-        require_keys_eq!(
-            ctx.accounts.previous_bidder.key(),
-            auction.highest_bidder,
-            ErrorCode::PreviousBidderMismatch
-        );
-
+        
         if auction.highest_bidder != Pubkey::default() {
+            require_keys_eq!(
+                ctx.accounts.previous_bidder.key(),
+                auction.highest_bidder,
+                ErrorCode::PreviousBidderMismatch
+            );
             let seeds: &[&[&[u8]]] = &[&[
                 b"auction_escrow",
                 auction_key.as_ref(),
@@ -104,6 +104,7 @@ pub mod auction {
         );
 
         transfer(cpi_ctx, bid_amount)?;
+        // ctx.accounts.previous_bidder=ctx.accounts.bidder.key();
 
         auction.highest_bid = bid_amount;
         auction.highest_bidder = ctx.accounts.bidder.key();

@@ -22,6 +22,7 @@ pub struct CreateAuction<'info> {
     ///CHECK: ONLY HOLDS SOL
     #[account
     (
+        init,payer=owner,space=0,
         seeds=[b"auction_escrow",auction.key().as_ref()],bump
     )]
     pub auction_escrow: UncheckedAccount<'info>,

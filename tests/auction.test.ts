@@ -8,7 +8,7 @@ import {
   createAssociatedTokenAccountInstruction,
 } from "@solana/spl-token";
 
-import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { PublicKey, SystemProgram, Keypair } from "@solana/web3.js";
 
 import { Auction } from "../target/types/auction";
 import { expect } from "chai";
@@ -19,7 +19,7 @@ describe("auction", () => {
   anchor.setProvider(provider);
 
   const program = anchor.workspace.auction as Program<Auction>;
-
+  let auction;
   let owner = provider.wallet.publicKey;
   let nftMint: PublicKey;
   let ownerNftAta: PublicKey;
@@ -30,6 +30,8 @@ describe("auction", () => {
   let auctionBump: number;
   let auctionEscrowBump: number;
   let escrowNftBump: number;
+
+  let bidder1 = Keypair.generate();
 
   it("Initialize NFT mint and ATA", async () => {
     nftMint = await createMint(
@@ -82,7 +84,7 @@ describe("auction", () => {
       );
 
     await program.methods
-      .createAuction(new anchor.BN(10), new anchor.BN(20), nftMint)
+      .createAuction(new anchor.BN(100), new anchor.BN(20000000000000), nftMint)
       .accounts({
         owner: owner,
         auction: auctionPda,
@@ -98,8 +100,55 @@ describe("auction", () => {
       .signers([provider.wallet.payer])
       .rpc();
 
-    const auction = await program.account.auction.fetch(auctionPda);
-    console.log("THIS IS AUCTION", owner.toBase58());
+    auction = await program.account.auction.fetch(auctionPda);
+    console.log("THIS IS AUCTION", auction);
     console.log("NFT MINT", nftMint.toBase58());
+  });
+
+  it("Should be able to bid on the auction", async () => {
+    // await new Promise((resolve) => setTimeout(resolve, 500)); // 500ms delay
+
+    const dummyPreviousBidder = Keypair.generate();
+    await provider.connection.requestAirdrop(
+      dummyPreviousBidder.publicKey,
+      1e9
+    );
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(
+        dummyPreviousBidder.publicKey,
+        1e9
+      ),
+      "confirmed"
+    );
+
+    const bidder1 = Keypair.generate(); // Assuming you define bidder1 here
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(bidder1.publicKey, 1e9),
+      "confirmed"
+    );
+
+    const balance = await provider.connection.getBalance(bidder1.publicKey);
+    const balance2 = await provider.connection.getBalance(
+      dummyPreviousBidder.publicKey
+    );
+
+    console.log("BALANCES", balance, balance2);
+    // Wait for airdrop confirmation
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // console.log("This is 3rd test auction", auction);
+    await program.methods
+      .createBid(new anchor.BN(110))
+      .accounts({
+        bidder: bidder1.publicKey,
+        auction: auctionPda,
+        previousBidder: dummyPreviousBidder.publicKey,
+        auctionEscrow: auctionEscrowPda,
+        system_program: SystemProgram.programId,
+      })
+      .signers([bidder1])
+      .rpc();
+
+    const bid = await program.account.auction.fetch(auctionPda);
+    console.log(bid);
   });
 });
