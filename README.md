@@ -1,4 +1,4 @@
-# 🧧 Solana NFT Auction (Anchor)
+#  Solana NFT Auction (Anchor)
 
 This is a decentralized NFT auction platform built on [Solana](https://solana.com/) using [Anchor](https://book.anchor-lang.com/).  
 NFT owners can list their NFTs for auction, and bidders can participate in a transparent and trustless bidding process.
