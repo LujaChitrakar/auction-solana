@@ -6,6 +6,7 @@ import {
   mintTo,
   createAssociatedTokenAccount,
   createAssociatedTokenAccountInstruction,
+  getAccount,
 } from "@solana/spl-token";
 
 import { PublicKey, SystemProgram, Keypair } from "@solana/web3.js";
@@ -45,6 +46,24 @@ describe("auction", () => {
     );
 
     ownerNftAta = await getAssociatedTokenAddress(nftMint, owner);
+    highestBidderNftAta = await getAssociatedTokenAddress(
+      nftMint,
+      bidder2.publicKey
+    );
+
+    try {
+      await getAccount(provider.connection, highestBidderNftAta);
+    } catch (_) {
+      const tx = new anchor.web3.Transaction().add(
+        createAssociatedTokenAccountInstruction(
+          provider.wallet.publicKey,
+          highestBidderNftAta,
+          bidder2.publicKey,
+          nftMint
+        )
+      );
+      await provider.sendAndConfirm(tx);
+    }
 
     await createAssociatedTokenAccount(
       provider.connection,
@@ -86,7 +105,7 @@ describe("auction", () => {
       );
 
     await program.methods
-      .createAuction(new anchor.BN(100), new anchor.BN(20000000000000), nftMint)
+      .createAuction(new anchor.BN(100), new anchor.BN(10000000000000), nftMint)
       .accounts({
         owner: owner,
         auction: auctionPda,
@@ -182,31 +201,33 @@ describe("auction", () => {
         .signers([bidder2])
         .rpc();
       const bid = await program.account.auction.fetch(auctionPda);
-      // console.log("CREATED", bid);
+      console.log("CREATED", bid);
     } catch (err) {
       console.log(err);
     }
   });
 
-  // it("Should be able to end auction and give nft to the highest bidder", async () => {
-  //   await program.methods
-  //     .endAuction()
-  //     .accounts({
-  //       owner: owner,
-  //       auction: auctionPda,
-  //       auctionEscrow: auctionEscrowPda,
-  //       highestBidderNftAccount: highestBidderNftAta,
-  //       escrowNftTokenAccount: escrowNftAta,
-  //       previousBidder: bidder2.publicKey,
-  //       nftMint: nftMint,
-  //       tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
-  //       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-  //       associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
-  //       system_program: SystemProgram.programId,
-  //     })
-  //     .rpc();
+  it("Should be able to end auction and give nft to the highest bidder", async () => {
+    console.log("Owner", owner);
+    console.log("SEller", auction);
+    await program.methods
+      .endAuction()
+      .accounts({
+        owner: owner,
+        auction: auctionPda,
+        auctionEscrow: auctionEscrowPda,
+        highestBidderNftAccount: highestBidderNftAta,
+        escrowNftTokenAccount: escrowNftAta,
+        previousBidder: bidder2.publicKey,
+        nftMint: nftMint,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+        system_program: SystemProgram.programId,
+      })
+      .rpc();
 
-  //   let auction_ended = await program.account.auction.fetch(auctionPda);
-  //   console.log(auction_ended);
-  // });
+    let auction_ended = await program.account.auction.fetch(auctionPda);
+    console.log(auction_ended);
+  });
 });

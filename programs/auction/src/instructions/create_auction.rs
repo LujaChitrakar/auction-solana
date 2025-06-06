@@ -39,7 +39,7 @@ pub struct CreateAuction<'info> {
         init_if_needed,
         payer=owner,
         token::mint=nft_mint,
-        token::authority=auction_escrow,
+        token::authority=auction,
         seeds=[b"escrow_nft",auction.key().as_ref()],
         bump,
     )]

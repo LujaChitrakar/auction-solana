@@ -13,7 +13,11 @@ declare_id!("E6nE6seBRzfDrk1m96fKXKWxYe7JYWSpkFVMj5CLGeP6");
 
 #[program]
 pub mod auction {
-     use super::*;
+    use anchor_lang::system_program;
+
+    use crate::states::auction;
+
+    use super::*;
 
     pub fn create_auction(
         ctx: Context<CreateAuction>,
@@ -23,8 +27,8 @@ pub mod auction {
     ) -> Result<()> {
         let auction = &mut ctx.accounts.auction;
         let current_time = Clock::get()?.unix_timestamp;
-
-        auction.seller = ctx.accounts.owner.key();
+        let owner = ctx.accounts.owner.key();
+        auction.seller = owner;
         auction.item_mint = item_mint;
         auction.starting_price = starting_price;
         auction.highest_bid = starting_price;
@@ -110,10 +114,10 @@ pub mod auction {
         let clock = Clock::get()?.unix_timestamp;
         let auction_key = auction.key();
 
-        require!(
-            auction.end_time <= clock,
-            ErrorCode::AuctionEndTimeNotReached
-        );
+        // require!(
+        //     auction.end_time <= clock,
+        //     ErrorCode::AuctionEndTimeNotReached
+        // );
         require_keys_eq!(
             ctx.accounts.previous_bidder.key(),
             auction.highest_bidder,
@@ -125,21 +129,8 @@ pub mod auction {
             ErrorCode::NotOwner
         );
 
-        let signer_seeds: &[&[&[u8]]] = &[&[
-            b"auction_escrow",
-            auction_key.as_ref(),
-            &[auction.escrow_bump],
-        ]];
-
-        let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.system_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.auction_escrow.to_account_info(),
-                to: ctx.accounts.owner.to_account_info(),
-            },
-            signer_seeds,
-        );
-
+        let seeds_nft: &[&[&[u8]]] =
+            &[&[b"auction", ctx.accounts.owner.key.as_ref(), &[auction.bump]]];
         let cpi_program_nft = ctx.accounts.token_program.to_account_info();
 
         let cpi_ctx_nft = CpiContext::new(
@@ -147,13 +138,18 @@ pub mod auction {
             TransferToken {
                 from: ctx.accounts.escrow_nft_token_account.to_account_info(),
                 to: ctx.accounts.highest_bidder_nft_account.to_account_info(),
-                authority: ctx.accounts.auction_escrow.to_account_info(),
+                authority: auction.to_account_info(),
             },
         )
-        .with_signer(signer_seeds);
+        .with_signer(seeds_nft);
 
         token_transfer(cpi_ctx_nft, 1)?;
-        transfer(cpi_ctx, auction.highest_bid)?;
+
+        ctx.accounts
+            .auction_escrow
+            .sub_lamports(auction.highest_bid)?;
+        ctx.accounts.owner.add_lamports(auction.highest_bid)?;
+
         auction.is_open = false;
 
         emit!(AuctionEnded {
