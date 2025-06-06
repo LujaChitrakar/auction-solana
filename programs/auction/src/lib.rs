@@ -114,10 +114,10 @@ pub mod auction {
         let clock = Clock::get()?.unix_timestamp;
         let auction_key = auction.key();
 
-        // require!(
-        //     auction.end_time <= clock,
-        //     ErrorCode::AuctionEndTimeNotReached
-        // );
+        require!(
+            auction.end_time <= clock,
+            ErrorCode::AuctionEndTimeNotReached
+        );
         require_keys_eq!(
             ctx.accounts.previous_bidder.key(),
             auction.highest_bidder,

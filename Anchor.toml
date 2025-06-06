@@ -12,7 +12,7 @@ auction = "E6nE6seBRzfDrk1m96fKXKWxYe7JYWSpkFVMj5CLGeP6"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "https://api.devnet.solana.com"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
