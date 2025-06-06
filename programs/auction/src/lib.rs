@@ -13,7 +13,7 @@ declare_id!("E6nE6seBRzfDrk1m96fKXKWxYe7JYWSpkFVMj5CLGeP6");
 
 #[program]
 pub mod auction {
-    use super::*;
+     use super::*;
 
     pub fn create_auction(
         ctx: Context<CreateAuction>,
@@ -70,30 +70,6 @@ pub mod auction {
             ErrorCode::AuctionTImeHasPassed
         );
         require!(auction.is_open == true, ErrorCode::AuctionClosed);
-        
-        if auction.highest_bidder != Pubkey::default() {
-            require_keys_eq!(
-                ctx.accounts.previous_bidder.key(),
-                auction.highest_bidder,
-                ErrorCode::PreviousBidderMismatch
-            );
-            let seeds: &[&[&[u8]]] = &[&[
-                b"auction_escrow",
-                auction_key.as_ref(),
-                &[auction.escrow_bump],
-            ]];
-            let refund_amount = auction.highest_bid;
-
-            let cpi_ctx_prevbidder = CpiContext::new(
-                ctx.accounts.system_program.to_account_info(),
-                Transfer {
-                    from: ctx.accounts.auction_escrow.to_account_info(),
-                    to: ctx.accounts.previous_bidder.to_account_info(),
-                },
-            )
-            .with_signer(seeds);
-            transfer(cpi_ctx_prevbidder, refund_amount)?;
-        }
 
         let cpi_ctx = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
@@ -102,9 +78,21 @@ pub mod auction {
                 to: ctx.accounts.auction_escrow.to_account_info(),
             },
         );
-
         transfer(cpi_ctx, bid_amount)?;
-        // ctx.accounts.previous_bidder=ctx.accounts.bidder.key();
+
+        if auction.highest_bidder != Pubkey::default() {
+            require_keys_eq!(
+                ctx.accounts.previous_bidder.key(),
+                auction.highest_bidder,
+                ErrorCode::PreviousBidderMismatch
+            );
+
+            let refund_amount = auction.highest_bid;
+
+            ctx.accounts.auction_escrow.sub_lamports(refund_amount)?;
+            ctx.accounts.previous_bidder.add_lamports(refund_amount)?;
+            msg!("Refunded to previous bidder");
+        }
 
         auction.highest_bid = bid_amount;
         auction.highest_bidder = ctx.accounts.bidder.key();
@@ -151,8 +139,6 @@ pub mod auction {
             },
             signer_seeds,
         );
-
-        // let signer_seeds_nft: &[&[&[u8]]]=&[&[b"escrow_nft",auction_key.as_ref()&[auction.escrow_bump]];
 
         let cpi_program_nft = ctx.accounts.token_program.to_account_info();
 

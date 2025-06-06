@@ -23,6 +23,7 @@ describe("auction", () => {
   let owner = provider.wallet.publicKey;
   let nftMint: PublicKey;
   let ownerNftAta: PublicKey;
+  let highestBidderNftAta: PublicKey;
   let auctionPda: PublicKey;
   let auctionEscrowPda: PublicKey;
   // let escrowAta: PublicKey;
@@ -32,6 +33,7 @@ describe("auction", () => {
   let escrowNftBump: number;
 
   let bidder1 = Keypair.generate();
+  let bidder2 = Keypair.generate();
 
   it("Initialize NFT mint and ATA", async () => {
     nftMint = await createMint(
@@ -101,8 +103,8 @@ describe("auction", () => {
       .rpc();
 
     auction = await program.account.auction.fetch(auctionPda);
-    console.log("THIS IS AUCTION", auction);
-    console.log("NFT MINT", nftMint.toBase58());
+    // console.log("THIS IS AUCTION", auction);
+    // console.log("NFT MINT", nftMint.toBase58());
   });
 
   it("Should be able to bid on the auction", async () => {
@@ -121,7 +123,7 @@ describe("auction", () => {
       "confirmed"
     );
 
-    const bidder1 = Keypair.generate(); // Assuming you define bidder1 here
+    // bidder1 = Keypair.generate(); // Assuming you define bidder1 here
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(bidder1.publicKey, 1e9),
       "confirmed"
@@ -132,10 +134,8 @@ describe("auction", () => {
       dummyPreviousBidder.publicKey
     );
 
-    console.log("BALANCES", balance, balance2);
-    // Wait for airdrop confirmation
+    // console.log("BALANCES", balance, balance2);
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    // console.log("This is 3rd test auction", auction);
     await program.methods
       .createBid(new anchor.BN(110))
       .accounts({
@@ -148,7 +148,65 @@ describe("auction", () => {
       .signers([bidder1])
       .rpc();
 
-    const bid = await program.account.auction.fetch(auctionPda);
-    console.log(bid);
+    auction = await program.account.auction.fetch(auctionPda);
+    // console.log(auction);
   });
+
+  it("Should be able to have multiple bids in auction", async () => {
+    await provider.connection.requestAirdrop(bidder1.publicKey, 1e9);
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(bidder1.publicKey, 1e9),
+      "confirmed"
+    );
+
+    await provider.connection.requestAirdrop(bidder2.publicKey, 1e9);
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(bidder2.publicKey, 1e9),
+      "confirmed"
+    );
+
+    const balance = await provider.connection.getBalance(bidder1.publicKey);
+    const balance2 = await provider.connection.getBalance(bidder2.publicKey);
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      await program.methods
+        .createBid(new anchor.BN(120))
+        .accounts({
+          bidder: bidder2.publicKey,
+          auction: auctionPda,
+          previousBidder: bidder1.publicKey,
+          auctionEscrow: auctionEscrowPda,
+          system_program: SystemProgram.programId,
+        })
+        .signers([bidder2])
+        .rpc();
+      const bid = await program.account.auction.fetch(auctionPda);
+      // console.log("CREATED", bid);
+    } catch (err) {
+      console.log(err);
+    }
+  });
+
+  // it("Should be able to end auction and give nft to the highest bidder", async () => {
+  //   await program.methods
+  //     .endAuction()
+  //     .accounts({
+  //       owner: owner,
+  //       auction: auctionPda,
+  //       auctionEscrow: auctionEscrowPda,
+  //       highestBidderNftAccount: highestBidderNftAta,
+  //       escrowNftTokenAccount: escrowNftAta,
+  //       previousBidder: bidder2.publicKey,
+  //       nftMint: nftMint,
+  //       tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+  //       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+  //       associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+  //       system_program: SystemProgram.programId,
+  //     })
+  //     .rpc();
+
+  //   let auction_ended = await program.account.auction.fetch(auctionPda);
+  //   console.log(auction_ended);
+  // });
 });

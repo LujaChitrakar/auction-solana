@@ -14,4 +14,6 @@ pub enum ErrorCode {
     AuctionEndTimeNotReached,
     #[msg("TOnly owner is authorized for this action.")]
     NotOwner,
+    #[msg("Escrow does not have enough funds.")]
+    EscrowInsufficientFund,
 }

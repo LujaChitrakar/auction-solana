@@ -22,10 +22,12 @@ pub struct CreateAuction<'info> {
     ///CHECK: ONLY HOLDS SOL
     #[account
     (
-        init,payer=owner,space=0,
+        init,
+        payer=owner,
+        space=0,
         seeds=[b"auction_escrow",auction.key().as_ref()],bump
     )]
-    pub auction_escrow: UncheckedAccount<'info>,
+    pub auction_escrow: AccountInfo<'info>,
 
     #[account(
         mut,
@@ -52,4 +54,4 @@ pub struct CreateAuction<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 
     pub system_program: Program<'info, System>,
-} 
+}

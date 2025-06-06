@@ -17,8 +17,11 @@ pub struct CreateBid<'info> {
     pub previous_bidder: UncheckedAccount<'info>,
 
     ///CHECK: escrowaccount that only holds sol
-    #[account(mut)]
-    pub auction_escrow: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        seeds=[b"auction_escrow",auction.key().as_ref()],bump
+    )]
+    pub auction_escrow: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
 }
