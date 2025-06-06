@@ -57,7 +57,7 @@ Built by EDdjJQZYsBA5UQmv6697hK6ct1qfFqZAzERGVFgSkJ5K
 
 ---
 
-## 🧑‍💻 Deployed Signature:
+##  Deployed Signature:
 
 
 du9QVHCgRnjtm19wqr649DJQuNWyMUVNEZ7KJFseSTmaDCvT9S5UnDeHRJhVu3d1iv5BSdSkKmTXEA6XVxvkXFu
